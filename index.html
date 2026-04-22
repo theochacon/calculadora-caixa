@@ -79,7 +79,6 @@
     .rt tr:last-child td { border-bottom:none; }
 
     #empty-msg { text-align:center; padding:48px 24px; color:var(--muted); font-size:14px; background:var(--card); border-radius:12px; border:1px solid var(--border); }
-    #results { display:none; }
   </style>
 </head>
 <body>
@@ -381,7 +380,6 @@ function calcular(){
     document.getElementById('empty-msg').style.display='';
     return;
   }
-  document.getElementById('results').style.display='';
   document.getElementById('empty-msg').style.display='none';
 
   // Eventos
@@ -519,8 +517,10 @@ function calcular(){
     },
   };
 
-  if(chart){ chart.data=cfg.data; chart.options=cfg.options; chart.update(); }
-  else { chart=new Chart(document.getElementById('myChart'), cfg); }
+  setTimeout(()=>{
+    if(chart){ chart.data=cfg.data; chart.options=cfg.options; chart.update(); }
+    else { chart=new Chart(document.getElementById('myChart'), cfg); }
+  }, 0);
 
   // Tabela empréstimos
   const sl=document.getElementById('sec-loans');
