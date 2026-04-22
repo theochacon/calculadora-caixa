@@ -471,6 +471,15 @@ function updateEmpUI() {
 });
 updateFeeUI();
 
+// Pre-fill Adesão with a sample row so the page works on first click
+(function() {
+  const row = document.querySelector('#tbl-adesao tbody tr');
+  if (!row) return;
+  row.querySelector('.l-qtd').value  = 50;
+  row.querySelector('.l-val').value  = 1200;
+  row.querySelector('.l-parc').value = 18;
+})();
+
 // ---- Read tables ----
 function readLotes(tblId) {
   const rows = [];
@@ -574,8 +583,9 @@ function calcular() {
   if (feeTipo === 'prop' && feeInicioTS) allKeys.add(mesKey(feeInicioTS));
   if (allKeys.size === 0) {
     const el = document.getElementById('calc-erro');
-    el.textContent = 'Preencha ao menos um lote (com quantidade e valor) ou um evento para ver a simulação.';
+    el.textContent = 'Preencha ao menos um lote (com quantidade e valor > 0) ou um evento com custo > 0 para ver a simulação.';
     el.style.display = '';
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
   document.getElementById('calc-erro').style.display = 'none';
