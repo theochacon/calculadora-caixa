@@ -4,12 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calculadora de Caixa</title>
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --primaria: #0000F4;
       --teal: #0D9488;
-      --amber: #B45309;
       --critico: #BE123C;
       --navy: #090430;
       --muted: rgba(9,4,48,0.54);
@@ -17,24 +16,24 @@
       --bg: #F4F4FA;
       --card: #FFFFFF;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system,'Segoe UI',sans-serif; background:var(--bg); color:var(--navy); padding:32px 24px; max-width:1100px; margin:0 auto; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,'Segoe UI',sans-serif; background:var(--bg); color:var(--navy); padding:32px 24px; max-width:1100px; margin:0 auto; }
     h1 { font-size:28px; font-weight:800; margin-bottom:4px; }
-    h2 { font-size:17px; font-weight:700; margin-bottom:8px; }
+    h2 { font-size:17px; font-weight:700; margin-bottom:10px; margin-top:2px; }
     .cap { color:var(--muted); font-size:13px; margin-bottom:16px; }
     hr { border:none; border-top:1px solid var(--border); margin:28px 0; }
 
     .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
     .g4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:16px; }
-    @media(max-width:700px){ .g2,.g3,.g4{grid-template-columns:1fr} }
+    @media(max-width:700px){ .g2,.g3,.g4{ grid-template-columns:1fr } }
 
     .fg { display:flex; flex-direction:column; gap:5px; }
     .lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
 
-    input[type=number], input[type=date], input[type=month], select {
+    input[type=number],input[type=date],input[type=month] {
       width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px;
-      font-size:14px; color:var(--navy); background:var(--card); outline:none;
+      font-size:14px; color:var(--navy); background:var(--card); outline:none; transition:border-color .15s;
     }
     input:focus { border-color:var(--primaria); }
 
@@ -51,16 +50,16 @@
     input:checked+.tog-sl::before { transform:translateX(20px); }
 
     .tbl-wrap { overflow-x:auto; margin-bottom:6px; }
-    table.etbl { width:100%; border-collapse:collapse; font-size:13px; }
-    .etbl thead th { text-align:left; padding:7px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1px solid var(--border); background:var(--bg); }
-    .etbl tbody td { padding:4px 6px; border-bottom:1px solid var(--border); }
-    .etbl tbody tr:hover { background:rgba(9,4,48,.02); }
-    .etbl td input { width:100%; border:none; background:transparent; font-size:13px; color:var(--navy); outline:none; padding:3px 4px; }
-    .etbl td input:focus { background:rgba(0,0,244,.04); border-radius:4px; }
-    .btn-add { font-size:12px; color:var(--primaria); background:none; border:none; cursor:pointer; font-weight:600; padding:3px 0; }
+    table.et { width:100%; border-collapse:collapse; font-size:13px; }
+    .et thead th { text-align:left; padding:7px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1px solid var(--border); background:var(--bg); white-space:nowrap; }
+    .et tbody td { padding:4px 6px; border-bottom:1px solid var(--border); }
+    .et tbody tr:hover { background:rgba(9,4,48,.02); }
+    .et td input { width:100%; border:none; background:transparent; font-size:13px; color:var(--navy); outline:none; padding:3px 4px; }
+    .et td input:focus { background:rgba(0,0,244,.04); border-radius:4px; }
+    .btn-add { font-size:12px; color:var(--primaria); background:none; border:none; cursor:pointer; font-weight:600; padding:3px 0; display:inline-block; margin-top:4px; }
     .btn-del { color:var(--critico); background:none; border:none; cursor:pointer; font-size:15px; padding:0 4px; }
 
-    .kpi-grid { display:grid; gap:12px; margin-bottom:24px; }
+    .kpi-grid { display:grid; gap:12px; margin-bottom:28px; }
     .kpi { background:var(--card); border-radius:8px; padding:14px 16px; border:1px solid var(--border); }
     .kpi-lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:6px; }
     .kpi-val { font-size:22px; font-weight:700; }
@@ -71,60 +70,61 @@
     .fv { font-size:18px; font-weight:700; }
     .fs { font-size:11px; color:rgba(9,4,48,.35); }
 
-    table.rtbl { width:100%; border-collapse:collapse; font-size:13px; }
-    .rtbl th { text-align:left; padding:8px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1px solid var(--border); background:var(--bg); }
-    .rtbl td { padding:8px 12px; border-bottom:1px solid var(--border); }
-    .rtbl tr:last-child td { border-bottom:none; }
+    .chart-box { background:var(--card); border-radius:12px; border:1px solid var(--border); padding:20px; margin-bottom:24px; }
+    #chart-wrap { position:relative; height:420px; }
 
+    table.rt { width:100%; border-collapse:collapse; font-size:13px; }
+    .rt th { text-align:left; padding:8px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1px solid var(--border); background:var(--bg); }
+    .rt td { padding:8px 12px; border-bottom:1px solid var(--border); }
+    .rt tr:last-child td { border-bottom:none; }
+
+    #empty-msg { text-align:center; padding:48px 24px; color:var(--muted); font-size:14px; background:var(--card); border-radius:12px; border:1px solid var(--border); }
     #results { display:none; }
-    #empty-state { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
   </style>
 </head>
 <body>
 
 <h1>Calculadora de Caixa</h1>
-<p class="cap">Preencha os campos abaixo — o gráfico atualiza automaticamente. Campos em branco são ignorados.</p>
+<p class="cap">Preencha os campos — o gráfico atualiza automaticamente. Seções em branco são ignoradas.</p>
 
-<!-- ADESÃO -->
 <h2>Adesão por Lotes</h2>
+<p class="cap" style="margin-bottom:10px">Quantidade de clientes, valor unitário, mês da 1ª parcela e número de parcelas.</p>
 <div class="tbl-wrap">
-  <table class="etbl" id="tbl-adesao">
+  <table class="et" id="tbl-ad">
     <thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead>
     <tbody></tbody>
   </table>
 </div>
-<button class="btn-add" onclick="addLote('tbl-adesao')">+ Adicionar linha</button>
+<button class="btn-add" onclick="addLote('tbl-ad')">+ Adicionar linha</button>
 
 <hr>
 
-<!-- EXTRAS -->
 <h2>Convites e Mesas Extras</h2>
 <div class="g2" style="gap:24px">
   <div>
-    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Convites Extras — Baile</p>
-    <div class="tbl-wrap"><table class="etbl" id="tbl-cb"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Convites — Baile</p>
+    <div class="tbl-wrap"><table class="et" id="tbl-cb"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
     <button class="btn-add" onclick="addLote('tbl-cb')">+ Adicionar linha</button>
   </div>
   <div>
-    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Convites Extras — Jantar</p>
-    <div class="tbl-wrap"><table class="etbl" id="tbl-cj"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Convites — Jantar</p>
+    <div class="tbl-wrap"><table class="et" id="tbl-cj"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
     <button class="btn-add" onclick="addLote('tbl-cj')">+ Adicionar linha</button>
   </div>
   <div>
-    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Mesas Extras — Baile</p>
-    <div class="tbl-wrap"><table class="etbl" id="tbl-mb"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Mesas — Baile</p>
+    <div class="tbl-wrap"><table class="et" id="tbl-mb"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
     <button class="btn-add" onclick="addLote('tbl-mb')">+ Adicionar linha</button>
   </div>
   <div>
-    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Mesas Extras — Jantar</p>
-    <div class="tbl-wrap"><table class="etbl" id="tbl-mj"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p style="font-weight:700;font-size:13px;margin-bottom:8px">Mesas — Jantar</p>
+    <div class="tbl-wrap"><table class="et" id="tbl-mj"><thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead><tbody></tbody></table></div>
     <button class="btn-add" onclick="addLote('tbl-mj')">+ Adicionar linha</button>
   </div>
 </div>
 
 <hr>
 
-<!-- FEE -->
 <h2>Fee da Agência</h2>
 <div class="g2" style="margin-bottom:16px">
   <div class="fg">
@@ -134,55 +134,51 @@
   <div class="fg">
     <label class="lbl">Forma de pagamento</label>
     <div class="radio-row">
-      <label><input type="radio" name="fee-tipo" value="parcelas" checked> Parcelas iguais</label>
-      <label><input type="radio" name="fee-tipo" value="entrada"> Entrada + parcelas</label>
-      <label><input type="radio" name="fee-tipo" value="prop"> Proporcional à receita</label>
+      <label><input type="radio" name="ftipo" value="parcelas" checked> Parcelas iguais</label>
+      <label><input type="radio" name="ftipo" value="entrada"> Entrada + parcelas</label>
+      <label><input type="radio" name="ftipo" value="prop"> Proporcional à receita</label>
     </div>
   </div>
 </div>
-
-<div id="ui-parcelas">
+<div id="ui-p">
   <div class="g3">
-    <div class="fg"><label class="lbl">Nº de parcelas</label><input type="number" id="fee-n-parc" min="1" max="120" value="12"></div>
-    <div class="fg"><label class="lbl">Início</label><input type="month" id="fee-inicio"></div>
-    <div class="kpi" style="align-self:end"><div class="kpi-lbl">Valor da parcela</div><div class="kpi-val" id="disp-parc">R$ 0,00/mês</div></div>
+    <div class="fg"><label class="lbl">Nº de parcelas</label><input type="number" id="fn-p" min="1" max="120" value="12"></div>
+    <div class="fg"><label class="lbl">Início</label><input type="month" id="fi-p"></div>
+    <div class="kpi" style="align-self:end"><div class="kpi-lbl">Parcela mensal</div><div class="kpi-val" id="dp-p">R$ 0,00</div></div>
   </div>
 </div>
-
-<div id="ui-entrada" style="display:none">
+<div id="ui-e" style="display:none">
   <div class="g2" style="margin-bottom:12px">
-    <div class="fg"><label class="lbl">Valor da entrada (R$)</label><input type="number" id="fee-ent-val" min="0" step="500" value="0"></div>
-    <div class="fg"><label class="lbl">Data da entrada</label><input type="month" id="fee-ent-data"></div>
+    <div class="fg"><label class="lbl">Valor da entrada (R$)</label><input type="number" id="fe-v" min="0" step="500" value="0"></div>
+    <div class="fg"><label class="lbl">Data da entrada</label><input type="month" id="fe-d"></div>
   </div>
   <div class="g3">
-    <div class="fg"><label class="lbl">Nº de parcelas restantes</label><input type="number" id="fee-ent-n" min="1" max="120" value="12"></div>
-    <div class="fg"><label class="lbl">Início das parcelas</label><input type="month" id="fee-ent-inicio"></div>
-    <div class="kpi" style="align-self:end"><div class="kpi-lbl">Valor da parcela</div><div class="kpi-val" id="disp-ent">R$ 0,00/mês</div></div>
+    <div class="fg"><label class="lbl">Parcelas restantes</label><input type="number" id="fe-n" min="1" max="120" value="12"></div>
+    <div class="fg"><label class="lbl">Início das parcelas</label><input type="month" id="fe-i"></div>
+    <div class="kpi" style="align-self:end"><div class="kpi-lbl">Parcela mensal</div><div class="kpi-val" id="dp-e">R$ 0,00</div></div>
   </div>
 </div>
-
-<div id="ui-prop" style="display:none">
+<div id="ui-r" style="display:none">
   <div class="g4" style="margin-bottom:12px">
-    <div class="fg"><label class="lbl">% do fee como entrada</label><input type="number" id="fee-pct-ent" min="1" max="99" value="30"></div>
-    <div class="fg"><label class="lbl">Cap mensal (% da receita)</label><input type="number" id="fee-cap-pct" min="1" max="100" value="60"></div>
-    <div class="fg"><label class="lbl">Parcelas do restante</label><input type="number" id="fee-prop-n" min="1" max="120" value="12"></div>
-    <div class="fg"><label class="lbl">Início</label><input type="month" id="fee-prop-inicio"></div>
+    <div class="fg"><label class="lbl">% entrada</label><input type="number" id="fr-pe" min="1" max="99" value="30"></div>
+    <div class="fg"><label class="lbl">Cap mensal (% receita)</label><input type="number" id="fr-cp" min="1" max="100" value="60"></div>
+    <div class="fg"><label class="lbl">Parcelas restante</label><input type="number" id="fr-n" min="1" max="120" value="12"></div>
+    <div class="fg"><label class="lbl">Início</label><input type="month" id="fr-i"></div>
   </div>
   <div class="fee-box">
     <div class="fee-row">
-      <div><div class="fl" id="p-l1">Fase 1 — Entrada (30%)</div><div class="fv" id="p-v1">R$ 0,00</div><div class="fs" id="p-s1">até 60% da receita/mês</div></div>
-      <div><div class="fl" id="p-l2">Fase 2 — Restante (70%) em 12x</div><div class="fv" id="p-v2">R$ 0,00/mês</div><div class="fs">começa após quitar a entrada</div></div>
+      <div><div class="fl" id="r-l1">Fase 1 — Entrada (30%)</div><div class="fv" id="r-v1">R$ 0,00</div><div class="fs" id="r-s1">até 60% da receita/mês</div></div>
+      <div><div class="fl" id="r-l2">Fase 2 — Restante (70%) em 12x</div><div class="fv" id="r-v2">R$ 0,00/mês</div><div class="fs">começa após quitar a entrada</div></div>
     </div>
   </div>
 </div>
 
 <hr>
 
-<!-- EVENTOS -->
 <h2>Eventos do Projeto</h2>
-<p class="cap">Informe cada evento, sua data e custo estimado. Deixe em branco o que não souber ainda.</p>
+<p class="cap" style="margin-bottom:10px">Eventos com data e custo. Deixe em branco o que não souber.</p>
 <div class="tbl-wrap">
-  <table class="etbl" id="tbl-ev">
+  <table class="et" id="tbl-ev">
     <thead><tr><th>Evento</th><th>Data</th><th>Custo (R$)</th><th></th></tr></thead>
     <tbody></tbody>
   </table>
@@ -191,466 +187,376 @@
 
 <hr>
 
-<!-- FINANCIAMENTO -->
 <h2>Financiamento de Eventos</h2>
-<p class="cap">Se o caixa for insuficiente para algum evento, injete o valor que falta e receba de volta com juros.</p>
-<label class="tog-row">
+<label class="tog-row" style="margin-bottom:16px">
   <span class="tog"><input type="checkbox" id="usar-emp"><span class="tog-sl"></span></span>
-  <span style="font-size:13px;font-weight:500">Emprestar para cobrir eventos insuficientes</span>
+  <span style="font-size:13px;font-weight:500">Emprestar para cobrir déficit em eventos</span>
 </label>
-<div id="emp-params" style="display:none;margin-top:16px">
+<div id="emp-p" style="display:none;margin-top:12px">
   <div class="g2">
-    <div class="fg"><label class="lbl">Taxa de juros (% ao mês)</label><input type="number" id="taxa-emp" min="0" max="30" step="0.1" value="1.0"></div>
-    <div class="fg"><label class="lbl">Parcelas para devolução</label><input type="number" id="n-parc-emp" min="1" max="120" value="12"></div>
+    <div class="fg"><label class="lbl">Taxa de juros (% ao mês)</label><input type="number" id="t-emp" min="0" max="30" step="0.1" value="1.0"></div>
+    <div class="fg"><label class="lbl">Parcelas para devolução</label><input type="number" id="n-emp" min="1" max="120" value="12"></div>
   </div>
 </div>
 
 <hr>
 
-<!-- RESULTS -->
-<div id="empty-state">Preencha a tabela de Adesão acima para ver o gráfico de caixa.</div>
+<div id="empty-msg">⬆ Preencha a tabela de Adesão acima para ver o gráfico de caixa.</div>
+
 <div id="results">
   <div id="kpi-grid" class="kpi-grid"></div>
+
   <h2>Linha do Tempo de Caixa</h2>
-  <p class="cap" id="chart-cap" style="margin-bottom:12px"></p>
-  <div id="chart" style="width:100%;height:500px"></div>
+  <div class="chart-box">
+    <div id="chart-wrap"><canvas id="myChart"></canvas></div>
+  </div>
 
-  <div id="loans-sec" style="display:none">
-    <hr><h2>Empréstimos Realizados</h2>
-    <div class="tbl-wrap" style="margin-top:10px">
-      <table class="rtbl" id="loans-tbl">
-        <thead><tr><th>Evento</th><th>Data</th><th>Empréstimo</th><th>Parcela mensal</th><th>Nº parcelas</th><th>Taxa</th><th>Total a devolver</th><th>Juros</th></tr></thead>
-        <tbody></tbody>
-      </table>
+  <div id="sec-loans" style="display:none">
+    <h2>Empréstimos Realizados</h2>
+    <div class="tbl-wrap" style="margin-bottom:28px">
+      <table class="rt" id="t-loans"><thead><tr><th>Evento</th><th>Data</th><th>Empréstimo</th><th>Parcela mensal</th><th>Nº parcelas</th><th>Taxa</th><th>Total a devolver</th><th>Juros</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
-  <div id="ev-sec" style="display:none">
-    <hr><h2>Status dos Eventos</h2>
-    <div class="tbl-wrap" style="margin-top:10px">
-      <table class="rtbl" id="ev-tbl">
-        <thead><tr><th>Evento</th><th>Data</th><th>Custo</th><th>Saldo após evento</th><th>Empréstimo</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
+  <div id="sec-ev" style="display:none">
+    <h2>Status dos Eventos</h2>
+    <div class="tbl-wrap" style="margin-bottom:28px">
+      <table class="rt" id="t-ev"><thead><tr><th>Evento</th><th>Data</th><th>Custo</th><th>Saldo após evento</th><th>Empréstimo</th><th>Status</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
-  <hr><h2>Detalhamento Mensal</h2>
-  <div class="tbl-wrap" style="margin-top:10px">
-    <table class="rtbl" id="monthly-tbl">
-      <thead><tr id="mhead"></tr></thead>
-      <tbody id="mbody"></tbody>
-    </table>
+  <h2>Detalhamento Mensal</h2>
+  <div class="tbl-wrap">
+    <table class="rt" id="t-mon"><thead><tr id="mh"></tr></thead><tbody id="mb"></tbody></table>
   </div>
 </div>
 
 <script>
-// ── Helpers ──────────────────────────────────────────────────────────────
-const fmtV  = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-const fmtMes = d => ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getMonth()] + '/' + d.getFullYear();
-const mesKey = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-const todayM = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
-function addM(d,n) { const r=new Date(d); r.setMonth(r.getMonth()+n); r.setDate(1); return r; }
+// ── Helpers ───────────────────────────────────────────────────
+const R = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const MES_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const fmt = d => MES_PT[d.getMonth()]+'/'+d.getFullYear();
+const key = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+const hoj = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+function add(d,n){ const r=new Date(d); r.setMonth(r.getMonth()+n); r.setDate(1); return r; }
 
-// ── Tables ────────────────────────────────────────────────────────────────
-function loteRow() {
+let chart = null;
+
+// ── Debounce ──────────────────────────────────────────────────
+function deb(fn,ms){ let t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
+const calcDeb = deb(calcular, 350);
+
+// ── Listeners helper ──────────────────────────────────────────
+function watchInputs(el){ el.querySelectorAll('input').forEach(i=>i.addEventListener('input',calcDeb)); }
+
+// ── Lote rows ─────────────────────────────────────────────────
+function addLote(id, q, v, parc){
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="number" min="0" step="1" placeholder="ex: 50" class="l-q"></td>
-    <td><input type="number" min="0" step="0.01" placeholder="ex: 1200" class="l-v"></td>
-    <td><input type="month" value="${todayM()}" class="l-d"></td>
-    <td><input type="number" min="1" max="120" step="1" value="12" class="l-p"></td>
-    <td><button class="btn-del" type="button">×</button></td>`;
-  tr.querySelector('.btn-del').onclick = () => { tr.remove(); calcular(); };
-  tr.querySelectorAll('input').forEach(i => i.addEventListener('input', debounce(calcular, 400)));
-  return tr;
+  tr.innerHTML =
+    `<td><input type="number" min="0" step="1" placeholder="ex: 50" class="lq" value="${q||''}"></td>`+
+    `<td><input type="number" min="0" step="0.01" placeholder="ex: 1200,00" class="lv" value="${v||''}"></td>`+
+    `<td><input type="month" value="${hoj()}" class="ld"></td>`+
+    `<td><input type="number" min="1" max="120" step="1" value="${parc||12}" class="lp"></td>`+
+    `<td><button class="btn-del" type="button">×</button></td>`;
+  tr.querySelector('.btn-del').onclick = ()=>{ tr.remove(); calcular(); };
+  watchInputs(tr);
+  document.querySelector('#'+id+' tbody').appendChild(tr);
 }
 
-function addLote(id) {
-  document.querySelector('#'+id+' tbody').appendChild(loteRow());
-}
-
-function evRow() {
-  const d = new Date().toISOString().split('T')[0];
+function addEv(n,d,c){
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="text" placeholder="Nome do evento" class="e-n" style="min-width:140px"></td>
-    <td><input type="date" value="${d}" class="e-d"></td>
-    <td><input type="number" min="0" step="0.01" placeholder="ex: 50000" class="e-c"></td>
-    <td><button class="btn-del" type="button">×</button></td>`;
-  tr.querySelector('.btn-del').onclick = () => { tr.remove(); calcular(); };
-  tr.querySelectorAll('input').forEach(i => i.addEventListener('input', debounce(calcular, 400)));
-  return tr;
+  const today = new Date().toISOString().split('T')[0];
+  tr.innerHTML =
+    `<td><input type="text" class="en" placeholder="Nome do evento" value="${n||''}" style="min-width:140px"></td>`+
+    `<td><input type="date" class="ed" value="${d||today}"></td>`+
+    `<td><input type="number" min="0" step="0.01" class="ec" placeholder="ex: 50000" value="${c||''}"></td>`+
+    `<td><button class="btn-del" type="button">×</button></td>`;
+  tr.querySelector('.btn-del').onclick = ()=>{ tr.remove(); calcular(); };
+  watchInputs(tr);
+  document.querySelector('#tbl-ev tbody').appendChild(tr);
 }
 
-function addEv() {
-  document.querySelector('#tbl-ev tbody').appendChild(evRow());
-}
+// ── Fee UI ────────────────────────────────────────────────────
+function ftipo(){ return document.querySelector('input[name="ftipo"]:checked').value; }
+function ftotal(){ return parseFloat(document.getElementById('fee-total').value)||0; }
 
-// ── Debounce ──────────────────────────────────────────────────────────────
-function debounce(fn, ms) {
-  let t;
-  return function(...args) { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
-
-// ── Fee UI ────────────────────────────────────────────────────────────────
-function feeTotal() { return parseFloat(document.getElementById('fee-total').value) || 0; }
-function feeTipo()  { return document.querySelector('input[name="fee-tipo"]:checked').value; }
-
-function updateFeeUI() {
-  const tipo = feeTipo(), total = feeTotal();
-  document.getElementById('ui-parcelas').style.display = tipo==='parcelas' ? '' : 'none';
-  document.getElementById('ui-entrada').style.display  = tipo==='entrada'  ? '' : 'none';
-  document.getElementById('ui-prop').style.display     = tipo==='prop'     ? '' : 'none';
-  if (tipo==='parcelas') {
-    const n = parseFloat(document.getElementById('fee-n-parc').value)||1;
-    document.getElementById('disp-parc').textContent = fmtV(total/n)+'/mês';
+function feeUI(){
+  const t=ftipo(), tot=ftotal();
+  document.getElementById('ui-p').style.display = t==='parcelas' ? '' : 'none';
+  document.getElementById('ui-e').style.display = t==='entrada'  ? '' : 'none';
+  document.getElementById('ui-r').style.display = t==='prop'     ? '' : 'none';
+  if(t==='parcelas'){
+    const n=parseFloat(document.getElementById('fn-p').value)||1;
+    document.getElementById('dp-p').textContent = R(tot/n)+'/mês';
   }
-  if (tipo==='entrada') {
-    const ent = parseFloat(document.getElementById('fee-ent-val').value)||0;
-    const n   = parseFloat(document.getElementById('fee-ent-n').value)||1;
-    document.getElementById('disp-ent').textContent = fmtV((total-ent)/n)+'/mês';
+  if(t==='entrada'){
+    const ev=parseFloat(document.getElementById('fe-v').value)||0;
+    const n =parseFloat(document.getElementById('fe-n').value)||1;
+    document.getElementById('dp-e').textContent = R((tot-ev)/n)+'/mês';
   }
-  if (tipo==='prop') {
-    const pct = parseFloat(document.getElementById('fee-pct-ent').value)||30;
-    const cap = parseFloat(document.getElementById('fee-cap-pct').value)||60;
-    const n   = parseFloat(document.getElementById('fee-prop-n').value)||12;
-    const ev  = total*pct/100, pv=(total-ev)/n;
-    document.getElementById('p-l1').textContent = `Fase 1 — Entrada (${pct}%)`;
-    document.getElementById('p-v1').textContent = fmtV(ev);
-    document.getElementById('p-s1').textContent = `até ${cap}% da receita/mês`;
-    document.getElementById('p-l2').textContent = `Fase 2 — Restante (${100-pct}%) em ${n}x`;
-    document.getElementById('p-v2').textContent = fmtV(pv)+'/mês';
+  if(t==='prop'){
+    const pe=parseFloat(document.getElementById('fr-pe').value)||30;
+    const cp=parseFloat(document.getElementById('fr-cp').value)||60;
+    const n =parseFloat(document.getElementById('fr-n').value)||12;
+    const ev=tot*pe/100, pv=(tot-ev)/n;
+    document.getElementById('r-l1').textContent=`Fase 1 — Entrada (${pe}%)`;
+    document.getElementById('r-v1').textContent=R(ev);
+    document.getElementById('r-s1').textContent=`até ${cp}% da receita/mês`;
+    document.getElementById('r-l2').textContent=`Fase 2 — Restante (${100-pe}%) em ${n}x`;
+    document.getElementById('r-v2').textContent=R(pv)+'/mês';
   }
   calcular();
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────
-['fee-inicio','fee-ent-data','fee-ent-inicio','fee-prop-inicio'].forEach(id => {
-  document.getElementById(id).value = todayM();
-});
-document.getElementById('usar-emp').addEventListener('change', () => {
-  document.getElementById('emp-params').style.display = document.getElementById('usar-emp').checked ? '' : 'none';
+// ── Init ──────────────────────────────────────────────────────
+['fi-p','fe-d','fe-i','fr-i'].forEach(id=>{ document.getElementById(id).value=hoj(); });
+
+document.querySelectorAll('input[name="ftipo"]').forEach(r=>r.addEventListener('change',feeUI));
+['fee-total','fn-p','fi-p','fe-v','fe-d','fe-n','fe-i','fr-pe','fr-cp','fr-n','fr-i','t-emp','n-emp']
+  .forEach(id=>document.getElementById(id).addEventListener('input',deb(feeUI,350)));
+document.getElementById('usar-emp').addEventListener('change',()=>{
+  document.getElementById('emp-p').style.display = document.getElementById('usar-emp').checked ? '' : 'none';
   calcular();
 });
-document.querySelectorAll('input[name="fee-tipo"]').forEach(r => r.addEventListener('change', updateFeeUI));
-document.getElementById('fee-total').addEventListener('input', debounce(updateFeeUI, 400));
-['fee-n-parc','fee-inicio','fee-ent-val','fee-ent-data','fee-ent-n','fee-ent-inicio',
- 'fee-pct-ent','fee-cap-pct','fee-prop-n','fee-prop-inicio','taxa-emp','n-parc-emp']
-  .forEach(id => document.getElementById(id).addEventListener('input', debounce(updateFeeUI, 400)));
 
-// Adicionar linhas iniciais
-['tbl-adesao','tbl-cb','tbl-cj','tbl-mb','tbl-mj'].forEach(id => addLote(id));
+// Adiciona linha inicial + exemplo pré-preenchido em Adesão
+addLote('tbl-ad', 50, 1200, 18);
+['tbl-cb','tbl-cj','tbl-mb','tbl-mj'].forEach(id=>addLote(id));
 addEv();
-updateFeeUI();
+feeUI();
 
-// ── Read data ─────────────────────────────────────────────────────────────
-function readLotes(id) {
-  const rows = [];
-  document.querySelectorAll('#'+id+' tbody tr').forEach(tr => {
-    const q = parseFloat(tr.querySelector('.l-q')?.value);
-    const v = parseFloat(tr.querySelector('.l-v')?.value);
-    const d = tr.querySelector('.l-d')?.value;
-    const p = parseInt(tr.querySelector('.l-p')?.value) || 12;
-    if (q > 0 && v > 0 && d) rows.push({q, v, d, p});
+// ── Read data ─────────────────────────────────────────────────
+function readLotes(id){
+  const rows=[];
+  document.querySelectorAll('#'+id+' tbody tr').forEach(tr=>{
+    const q=parseFloat(tr.querySelector('.lq')?.value);
+    const v=parseFloat(tr.querySelector('.lv')?.value);
+    const d=tr.querySelector('.ld')?.value;
+    const p=parseInt(tr.querySelector('.lp')?.value)||12;
+    if(q>0 && v>0 && d) rows.push({q,v,d,p});
+  });
+  return rows;
+}
+function readEvs(){
+  const rows=[];
+  document.querySelectorAll('#tbl-ev tbody tr').forEach(tr=>{
+    const n=tr.querySelector('.en')?.value?.trim();
+    const d=tr.querySelector('.ed')?.value;
+    const c=parseFloat(tr.querySelector('.ec')?.value);
+    if(n && d && c>0) rows.push({n,d,c});
   });
   return rows;
 }
 
-function readEvs() {
-  const rows = [];
-  document.querySelectorAll('#tbl-ev tbody tr').forEach(tr => {
-    const n = tr.querySelector('.e-n')?.value?.trim();
-    const d = tr.querySelector('.e-d')?.value;
-    const c = parseFloat(tr.querySelector('.e-c')?.value);
-    if (n && d && c > 0) rows.push({n, d, c});
-  });
-  return rows;
-}
-
-// ── Main calculation ──────────────────────────────────────────────────────
-function calcular() {
-  const cats = {
-    'Adesão':       readLotes('tbl-adesao'),
-    'Conv. Baile':  readLotes('tbl-cb'),
-    'Conv. Jantar': readLotes('tbl-cj'),
-    'Mesa Baile':   readLotes('tbl-mb'),
-    'Mesa Jantar':  readLotes('tbl-mj'),
+// ── Calculation ───────────────────────────────────────────────
+function calcular(){
+  const cats={
+    'Adesão':      readLotes('tbl-ad'),
+    'Conv. Baile': readLotes('tbl-cb'),
+    'Conv. Jantar':readLotes('tbl-cj'),
+    'Mesa Baile':  readLotes('tbl-mb'),
+    'Mesa Jantar': readLotes('tbl-mj'),
   };
   const evRaw   = readEvs();
-  const ftotal  = feeTotal();
-  const ftipo   = feeTipo();
-  const usarEmp = document.getElementById('usar-emp').checked;
-  const taxaEmp = parseFloat(document.getElementById('taxa-emp').value) || 0;
-  const nPEmp   = parseInt(document.getElementById('n-parc-emp').value) || 12;
+  const tot     = ftotal();
+  const tipo    = ftipo();
+  const useEmp  = document.getElementById('usar-emp').checked;
+  const taxaEmp = parseFloat(document.getElementById('t-emp').value)||0;
+  const nPEmp   = parseInt(document.getElementById('n-emp').value)||12;
 
   // Entradas mensais
-  const entradas = {};
-  Object.values(cats).flat().forEach(r => {
-    const [y,m] = r.d.split('-').map(Number);
-    const ini = new Date(y, m-1, 1);
-    const pv  = (r.q * r.v) / Math.max(r.p, 1);
-    for (let i = 0; i < r.p; i++) {
-      const k = mesKey(addM(ini, i));
-      entradas[k] = (entradas[k]||0) + pv;
+  const ent={};
+  Object.values(cats).flat().forEach(r=>{
+    const [y,m]=r.d.split('-').map(Number);
+    const ini=new Date(y,m-1,1);
+    const pv=(r.q*r.v)/Math.max(r.p,1);
+    for(let i=0;i<r.p;i++){
+      const k=key(add(ini,i));
+      ent[k]=(ent[k]||0)+pv;
     }
   });
 
-  // Sem dados: mostrar empty state
-  if (Object.keys(entradas).length === 0) {
-    document.getElementById('results').style.display = 'none';
-    document.getElementById('empty-state').style.display = '';
+  if(!Object.keys(ent).length){
+    document.getElementById('results').style.display='none';
+    document.getElementById('empty-msg').style.display='';
     return;
   }
-  document.getElementById('results').style.display = '';
-  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results').style.display='';
+  document.getElementById('empty-msg').style.display='none';
 
   // Eventos
-  const custos  = {};
-  const evLista = [];
-  evRaw.forEach(ev => {
-    const d   = new Date(ev.d + 'T12:00:00');
-    const mes = new Date(d.getFullYear(), d.getMonth(), 1);
-    const k   = mesKey(mes);
-    custos[k] = (custos[k]||0) + ev.c;
-    evLista.push({nome:ev.n, data:d, custo:ev.c, mes, k});
+  const cus={}, evL=[];
+  evRaw.forEach(ev=>{
+    const d=new Date(ev.d+'T12:00:00');
+    const mes=new Date(d.getFullYear(),d.getMonth(),1);
+    const k=key(mes);
+    cus[k]=(cus[k]||0)+ev.c;
+    evL.push({nome:ev.n,data:d,custo:ev.c,mes,k});
   });
 
   // Fee
-  const feeMes = {};
-  let feeIni = null;
-  let fpFase, fpEntR, fpParcR, fpParcV, fpPctEnt, fpCapPct, fpN;
-
-  if (ftotal > 0) {
-    if (ftipo === 'parcelas') {
-      const n  = parseInt(document.getElementById('fee-n-parc').value)||1;
-      const [iy,im] = document.getElementById('fee-inicio').value.split('-').map(Number);
-      const ini = new Date(iy, im-1, 1);
-      const pv  = ftotal/n;
-      for (let i=0;i<n;i++) { const k=mesKey(addM(ini,i)); feeMes[k]=(feeMes[k]||0)+pv; }
-    } else if (ftipo === 'entrada') {
-      const ev  = parseFloat(document.getElementById('fee-ent-val').value)||0;
-      const [ey,em] = document.getElementById('fee-ent-data').value.split('-').map(Number);
-      const kEnt = mesKey(new Date(ey,em-1,1));
-      if (ev>0) feeMes[kEnt]=(feeMes[kEnt]||0)+ev;
-      const n  = parseInt(document.getElementById('fee-ent-n').value)||1;
-      const [iy,im] = document.getElementById('fee-ent-inicio').value.split('-').map(Number);
-      const ini = new Date(iy,im-1,1);
-      const pv  = (ftotal-ev)/n;
-      for (let i=0;i<n;i++) { const k=mesKey(addM(ini,i)); feeMes[k]=(feeMes[k]||0)+pv; }
+  const feM={};
+  let fIni=null, fpF,fpER,fpPR,fpPV,fpPE,fpCP,fpFN;
+  if(tot>0){
+    if(tipo==='parcelas'){
+      const n=parseInt(document.getElementById('fn-p').value)||1;
+      const [iy,im]=document.getElementById('fi-p').value.split('-').map(Number);
+      const ini=new Date(iy,im-1,1), pv=tot/n;
+      for(let i=0;i<n;i++){const k=key(add(ini,i)); feM[k]=(feM[k]||0)+pv;}
+    } else if(tipo==='entrada'){
+      const ev=parseFloat(document.getElementById('fe-v').value)||0;
+      const [ey,em]=document.getElementById('fe-d').value.split('-').map(Number);
+      const kE=key(new Date(ey,em-1,1));
+      if(ev>0) feM[kE]=(feM[kE]||0)+ev;
+      const n=parseInt(document.getElementById('fe-n').value)||1;
+      const [iy,im]=document.getElementById('fe-i').value.split('-').map(Number);
+      const ini=new Date(iy,im-1,1), pv=(tot-ev)/n;
+      for(let i=0;i<n;i++){const k=key(add(ini,i)); feM[k]=(feM[k]||0)+pv;}
     } else {
-      fpPctEnt = parseFloat(document.getElementById('fee-pct-ent').value)||30;
-      fpCapPct = parseFloat(document.getElementById('fee-cap-pct').value)||60;
-      fpN      = parseInt(document.getElementById('fee-prop-n').value)||12;
-      fpParcV  = ftotal*(1-fpPctEnt/100)/fpN;
-      fpFase   = 'entrada';
-      fpEntR   = ftotal*fpPctEnt/100;
-      fpParcR  = fpN;
-      const [iy,im] = document.getElementById('fee-prop-inicio').value.split('-').map(Number);
-      feeIni = new Date(iy,im-1,1);
+      fpPE=parseFloat(document.getElementById('fr-pe').value)||30;
+      fpCP=parseFloat(document.getElementById('fr-cp').value)||60;
+      fpFN=parseInt(document.getElementById('fr-n').value)||12;
+      fpPV=tot*(1-fpPE/100)/fpFN; fpF='ent'; fpER=tot*fpPE/100; fpPR=fpFN;
+      const [iy,im]=document.getElementById('fr-i').value.split('-').map(Number);
+      fIni=new Date(iy,im-1,1);
     }
   }
 
   // Range de meses
-  const allK = new Set([...Object.keys(entradas),...Object.keys(custos),...Object.keys(feeMes)]);
-  if (ftipo==='prop' && feeIni) allK.add(mesKey(feeIni));
-  const sorted  = Array.from(allK).sort();
-  const minMes  = new Date(sorted[0]+'-01');
-  const maxBase = new Date(sorted[sorted.length-1]+'-01');
-  let ext = (usarEmp && evLista.length) ? nPEmp : 0;
-  if (ftipo==='prop' && ftotal>0) ext = Math.max(ext, fpN+24);
-  const maxMes = addM(maxBase, ext);
-
-  const meses = [];
-  let cur = new Date(minMes);
-  while (cur <= maxMes) { meses.push(new Date(cur)); cur = addM(cur,1); }
+  const allK=new Set([...Object.keys(ent),...Object.keys(cus),...Object.keys(feM)]);
+  if(tipo==='prop'&&fIni) allK.add(key(fIni));
+  const sk=Array.from(allK).sort();
+  const minM=new Date(sk[0]+'-01'), maxB=new Date(sk[sk.length-1]+'-01');
+  let ext=(useEmp&&evL.length)?nPEmp:0;
+  if(tipo==='prop'&&tot>0) ext=Math.max(ext,fpFN+24);
+  const maxM=add(maxB,ext);
+  const meses=[]; let cur=new Date(minM);
+  while(cur<=maxM){meses.push(new Date(cur)); cur=add(cur,1);}
 
   // Loop iterativo
-  const repays = {};
-  const loans  = [];
-  let caixa = 0;
-  const fluxo = [];
-
-  meses.forEach(mes => {
-    const k  = mesKey(mes);
-    const ent = entradas[k]||0;
-
-    let feeM = 0;
-    if (ftipo==='prop' && ftotal>0) {
-      if (feeIni && mes < feeIni) {
-        feeM = 0;
-      } else if (fpFase==='entrada') {
-        const cap = (fpCapPct/100)*ent;
-        feeM = Math.min(fpEntR, cap);
-        fpEntR -= feeM;
-        if (fpEntR <= 0.01) fpFase = 'parcelas';
-      } else if (fpFase==='parcelas' && fpParcR>0) {
-        feeM = fpParcV;
-        fpParcR--;
-        if (fpParcR===0) fpFase = 'done';
-      }
-    } else {
-      feeM = feeMes[k]||0;
+  const rep={}, loans=[];
+  let caixa=0, fluxo=[];
+  meses.forEach(mes=>{
+    const k=key(mes), e=ent[k]||0;
+    let fm=0;
+    if(tipo==='prop'&&tot>0){
+      if(fIni&&mes<fIni) fm=0;
+      else if(fpF==='ent'){const c=(fpCP/100)*e; fm=Math.min(fpER,c); fpER-=fm; if(fpER<=.01) fpF='par';}
+      else if(fpF==='par'&&fpPR>0){fm=fpPV; fpPR--; if(fpPR===0) fpF='done';}
+    } else fm=feM[k]||0;
+    const rp=rep[k]||0, ev=cus[k]||0;
+    caixa+=e-fm-rp;
+    let emp=0;
+    if(ev>0){
+      const evN=evL.find(x=>x.k===k)?.nome||'Evento';
+      if(caixa>=ev) caixa-=ev;
+      else if(useEmp){
+        const sf=ev-caixa; emp=sf; caixa=0;
+        const r=taxaEmp/100;
+        const pmt=r>0?sf*r*Math.pow(1+r,nPEmp)/(Math.pow(1+r,nPEmp)-1):sf/nPEmp;
+        for(let i=1;i<=nPEmp;i++){const rk=key(add(mes,i)); rep[rk]=(rep[rk]||0)+pmt;}
+        loans.push({nome:evN,data:mes,valor:sf,pmt,parcelas:nPEmp,taxa:taxaEmp});
+      } else caixa-=ev;
     }
-
-    const rep = repays[k]||0;
-    const ev  = custos[k]||0;
-    caixa += ent - feeM - rep;
-    let empInj = 0;
-
-    if (ev > 0) {
-      const evN = evLista.find(e=>e.k===k)?.nome||'Evento';
-      if (caixa >= ev) {
-        caixa -= ev;
-      } else if (usarEmp) {
-        const sf = ev - caixa;
-        empInj = sf; caixa = 0;
-        const r = taxaEmp/100;
-        const pmt = r>0 ? sf*r*Math.pow(1+r,nPEmp)/(Math.pow(1+r,nPEmp)-1) : sf/nPEmp;
-        for (let i=1;i<=nPEmp;i++) { const rk=mesKey(addM(mes,i)); repays[rk]=(repays[rk]||0)+pmt; }
-        loans.push({nome:evN, data:mes, valor:sf, pmt, parcelas:nPEmp, taxa:taxaEmp});
-      } else {
-        caixa -= ev;
-      }
-    }
-    fluxo.push({mes, k, ent, fee:feeM, rep, emp:empInj, ev, caixa});
+    fluxo.push({mes,k,e,fm,rp,emp,ev,caixa});
   });
-
-  // Totais
-  const totR  = Object.values(entradas).reduce((a,b)=>a+b,0);
-  const totF  = ftipo==='prop' ? fluxo.reduce((a,r)=>a+r.fee,0) : Object.values(feeMes).reduce((a,b)=>a+b,0);
-  const totEv = Object.values(custos).reduce((a,b)=>a+b,0);
-  const totEmp = loans.reduce((a,l)=>a+l.valor,0);
-  const totDev = loans.reduce((a,l)=>a+l.pmt*l.parcelas,0);
-  const juros  = totDev - totEmp;
-  const saldo  = fluxo.length ? fluxo[fluxo.length-1].caixa : 0;
 
   // KPIs
-  const nCols = loans.length > 0 ? 6 : 4;
-  const corSF = saldo >= 0 ? '#0D9488' : '#BE123C';
-  document.getElementById('kpi-grid').style.gridTemplateColumns = `repeat(${nCols},1fr)`;
-  let kpis = `
-    <div class="kpi"><div class="kpi-lbl">Receita Total</div><div class="kpi-val">${fmtV(totR)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Fee da Agência</div><div class="kpi-val">${fmtV(totF)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Custos Eventos</div><div class="kpi-val">${fmtV(totEv)}</div></div>`;
-  if (loans.length) kpis += `
-    <div class="kpi"><div class="kpi-lbl">Emprestado</div><div class="kpi-val">${fmtV(totEmp)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Juros (${taxaEmp.toFixed(1)}%/mês)</div><div class="kpi-val">${fmtV(juros)}</div></div>`;
-  kpis += `<div class="kpi"><div class="kpi-lbl">Saldo Final</div><div class="kpi-val" style="color:${corSF}">${fmtV(saldo)}</div></div>`;
-  document.getElementById('kpi-grid').innerHTML = kpis;
+  const totR=Object.values(ent).reduce((a,b)=>a+b,0);
+  const totF=tipo==='prop'?fluxo.reduce((a,r)=>a+r.fm,0):Object.values(feM).reduce((a,b)=>a+b,0);
+  const totEv=Object.values(cus).reduce((a,b)=>a+b,0);
+  const totEmp=loans.reduce((a,l)=>a+l.valor,0);
+  const totDev=loans.reduce((a,l)=>a+l.pmt*l.parcelas,0);
+  const saldo=fluxo.length?fluxo[fluxo.length-1].caixa:0;
+  const nc=loans.length?6:4;
+  const corS=saldo>=0?'#0D9488':'#BE123C';
+  document.getElementById('kpi-grid').style.gridTemplateColumns=`repeat(${nc},1fr)`;
+  let kh=`
+    <div class="kpi"><div class="kpi-lbl">Receita Total</div><div class="kpi-val">${R(totR)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Fee da Agência</div><div class="kpi-val">${R(totF)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Custos Eventos</div><div class="kpi-val">${R(totEv)}</div></div>`;
+  if(loans.length) kh+=`
+    <div class="kpi"><div class="kpi-lbl">Emprestado</div><div class="kpi-val">${R(totEmp)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Juros (${taxaEmp.toFixed(1)}%/mês)</div><div class="kpi-val">${R(totDev-totEmp)}</div></div>`;
+  kh+=`<div class="kpi"><div class="kpi-lbl">Saldo Final</div><div class="kpi-val" style="color:${corS}">${R(saldo)}</div></div>`;
+  document.getElementById('kpi-grid').innerHTML=kh;
 
-  // Gráfico
-  let fimGraf;
-  if (evLista.length) {
-    const ultEv = evLista.reduce((a,e)=>e.mes>a?e.mes:a, evLista[0].mes);
-    fimGraf = addM(ultEv, usarEmp && loans.length ? nPEmp+1 : 2);
-  } else {
-    fimGraf = fluxo.length ? fluxo[fluxo.length-1].mes : new Date();
-  }
-  const dfG   = fluxo.filter(r=>r.mes<=fimGraf);
-  const lbls  = dfG.map(r=>fmtMes(r.mes));
+  // Gráfico (Chart.js)
+  let fimG;
+  if(evL.length){ const ul=evL.reduce((a,e)=>e.mes>a?e.mes:a,evL[0].mes); fimG=add(ul,useEmp&&loans.length?nPEmp+1:2); }
+  else fimG=fluxo.length?fluxo[fluxo.length-1].mes:new Date();
+  const dfG=fluxo.filter(r=>r.mes<=fimG);
+  const lbls=dfG.map(r=>fmt(r.mes));
 
-  const traces = [
-    {x:lbls, y:dfG.map(r=>r.ent), name:'Entradas mensais', type:'bar',
-     marker:{color:'rgba(52,152,219,0.40)'}, hovertemplate:'%{x}<br>Entrada: R$ %{y:,.0f}<extra></extra>'},
+  const datasets=[
+    { label:'Entradas mensais', data:dfG.map(r=>+r.e.toFixed(2)), backgroundColor:'rgba(52,152,219,0.45)', order:2 },
+    { label:'Fee da Agência',   data:dfG.map(r=>+(-r.fm).toFixed(2)), backgroundColor:'rgba(230,126,34,0.65)', order:2 },
+    { label:'Custo Evento',     data:dfG.map(r=>+(-r.ev).toFixed(2)), backgroundColor:'rgba(231,76,60,0.70)', order:2 },
   ];
-  if (dfG.some(r=>r.fee>0)) traces.push(
-    {x:lbls, y:dfG.map(r=>-r.fee), name:'Fee da Agência', type:'bar',
-     marker:{color:'rgba(230,126,34,0.65)'}, customdata:dfG.map(r=>r.fee),
-     hovertemplate:'%{x}<br>Fee: R$ %{customdata:,.0f}<extra></extra>'});
-  if (dfG.some(r=>r.ev>0)) traces.push(
-    {x:lbls, y:dfG.map(r=>-r.ev), name:'Custo do evento', type:'bar',
-     marker:{color:'rgba(231,76,60,0.70)'}, customdata:dfG.map(r=>r.ev),
-     hovertemplate:'%{x}<br>Evento: R$ %{customdata:,.0f}<extra></extra>'});
-  if (dfG.some(r=>r.emp>0)) traces.push(
-    {x:lbls, y:dfG.map(r=>r.emp), name:'Empréstimo injetado', type:'bar',
-     marker:{color:'rgba(39,174,96,0.75)'}, hovertemplate:'%{x}<br>Empréstimo: R$ %{y:,.0f}<extra></extra>'});
-  if (dfG.some(r=>r.rep>0)) traces.push(
-    {x:lbls, y:dfG.map(r=>-r.rep), name:'Repagamento', type:'bar',
-     marker:{color:'rgba(155,89,182,0.70)'}, customdata:dfG.map(r=>r.rep),
-     hovertemplate:'%{x}<br>Repagamento: R$ %{customdata:,.0f}<extra></extra>'});
-  traces.push(
-    {x:lbls, y:dfG.map(r=>r.caixa), name:'Saldo do caixa', type:'scatter',
-     mode:'lines+markers', line:{color:'#27ae60',width:3}, marker:{size:5},
-     hovertemplate:'%{x}<br>Saldo: R$ %{y:,.0f}<extra></extra>'});
-
-  const shapes = [];
-  evLista.forEach(ev => {
-    const row = dfG.find(r=>r.k===ev.k);
-    if (!row) return;
-    const cor = row.emp>0 ? '#e67e22' : row.caixa>=0 ? '#27ae60' : '#e74c3c';
-    const st  = row.emp>0 ? 'Coberto por empréstimo' : row.caixa>=0 ? 'Caixa suficiente' : 'Insuficiente';
-    const lbl = fmtMes(ev.mes);
-    shapes.push(
-      {type:'line',x0:lbl,x1:lbl,y0:0,y1:1,yref:'paper',line:{color:cor,width:1.5,dash:'dash'},opacity:0.6},
-      {type:'line',x0:lbls[0],x1:lbls[lbls.length-1],y0:ev.custo,y1:ev.custo,line:{color:cor,width:1.5,dash:'dot'}}
-    );
-    traces.push({
-      x:[lbl], y:[row.caixa], mode:'markers', type:'scatter',
-      marker:{size:14, color:cor, symbol:'diamond', line:{width:2,color:'white'}},
-      name:ev.nome,
-      hovertemplate:`<b>${ev.nome}</b><br>Custo: ${fmtV(ev.custo)}<br>Saldo após: ${fmtV(row.caixa)}<br>${st}<extra></extra>`,
-    });
+  if(dfG.some(r=>r.emp>0)) datasets.push({ label:'Empréstimo injetado', data:dfG.map(r=>+r.emp.toFixed(2)), backgroundColor:'rgba(39,174,96,0.75)', order:2 });
+  if(dfG.some(r=>r.rp>0))  datasets.push({ label:'Repagamento', data:dfG.map(r=>+(-r.rp).toFixed(2)), backgroundColor:'rgba(155,89,182,0.70)', order:2 });
+  datasets.push({
+    label:'Saldo do caixa', type:'line',
+    data:dfG.map(r=>+r.caixa.toFixed(2)),
+    borderColor:'#27ae60', backgroundColor:'rgba(39,174,96,0.08)',
+    borderWidth:3, pointRadius:4, fill:false, tension:.2, order:1,
   });
 
-  const layout = {
-    height:500, hovermode:'x unified', barmode:'relative',
-    margin:{t:40,b:80,l:20,r:220},
-    legend:{orientation:'h',yanchor:'bottom',y:1.02,x:0,bgcolor:'rgba(0,0,0,0)'},
-    yaxis:{tickprefix:'R$ ',tickformat:',.0f',gridcolor:'rgba(9,4,48,.08)',title:''},
-    xaxis:{tickangle:-45,gridcolor:'rgba(9,4,48,.08)'},
-    plot_bgcolor:'rgba(0,0,0,0)', paper_bgcolor:'rgba(0,0,0,0)',
-    font:{color:'#090430'}, shapes,
+  const cfg={
+    type:'bar',
+    data:{labels:lbls, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{position:'top', labels:{boxWidth:12, padding:16, font:{size:12}}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${R(Math.abs(ctx.parsed.y))}`}},
+      },
+      scales:{
+        x:{ stacked:true, ticks:{maxRotation:45, font:{size:11}} },
+        y:{ stacked:false, ticks:{callback:v=>R(v), font:{size:11}}, grid:{color:'rgba(9,4,48,.07)'} },
+      },
+    },
   };
 
-  if (document.getElementById('chart')._hasPlot) {
-    Plotly.react('chart', traces, layout);
-  } else {
-    Plotly.newPlot('chart', traces, layout, {responsive:true});
-    document.getElementById('chart')._hasPlot = true;
-  }
-
-  document.getElementById('chart-cap').textContent = usarEmp && loans.length
-    ? 'Linha verde = saldo real do caixa. Barras verdes = empréstimos. Barras roxas = repagamentos.'
-    : 'Linha verde = saldo do caixa. Barras azuis = entradas mensais. Linhas tracejadas = eventos.';
+  if(chart){ chart.data=cfg.data; chart.options=cfg.options; chart.update(); }
+  else { chart=new Chart(document.getElementById('myChart'), cfg); }
 
   // Tabela empréstimos
-  const lsec = document.getElementById('loans-sec');
-  if (loans.length) {
-    lsec.style.display='';
-    document.querySelector('#loans-tbl tbody').innerHTML = loans.map(l=>`<tr>
+  const sl=document.getElementById('sec-loans');
+  if(loans.length){
+    sl.style.display='';
+    document.querySelector('#t-loans tbody').innerHTML=loans.map(l=>`<tr>
       <td>${l.nome}</td><td>${l.data.toLocaleDateString('pt-BR')}</td>
-      <td>${fmtV(l.valor)}</td><td>${fmtV(l.pmt)}</td><td>${l.parcelas}</td>
-      <td>${l.taxa.toFixed(2)}% a.m.</td><td>${fmtV(l.pmt*l.parcelas)}</td>
-      <td>${fmtV(l.pmt*l.parcelas-l.valor)}</td></tr>`).join('');
-  } else lsec.style.display='none';
+      <td>${R(l.valor)}</td><td>${R(l.pmt)}</td><td>${l.parcelas}</td>
+      <td>${l.taxa.toFixed(2)}% a.m.</td><td>${R(l.pmt*l.parcelas)}</td><td>${R(l.pmt*l.parcelas-l.valor)}</td>
+    </tr>`).join('');
+  } else sl.style.display='none';
 
   // Status eventos
-  const esec = document.getElementById('ev-sec');
-  if (evLista.length) {
-    esec.style.display='';
-    const sorted = [...evLista].sort((a,b)=>a.data-b.data);
-    document.querySelector('#ev-tbl tbody').innerHTML = sorted.map(ev=>{
+  const se=document.getElementById('sec-ev');
+  if(evL.length){
+    se.style.display='';
+    document.querySelector('#t-ev tbody').innerHTML=[...evL].sort((a,b)=>a.data-b.data).map(ev=>{
       const row=fluxo.find(r=>r.k===ev.k);
-      const cv=row?row.caixa:0, ev2=row?row.emp:0;
-      const st=ev2>0?'⚠️ Coberto por empréstimo':cv>=0?'✅ Caixa suficiente':'❌ Insuficiente';
+      const cv=row?row.caixa:0, emp=row?row.emp:0;
+      const st=emp>0?'⚠️ Coberto por empréstimo':cv>=0?'✅ Caixa suficiente':'❌ Insuficiente';
       return `<tr><td>${ev.nome}</td><td>${ev.data.toLocaleDateString('pt-BR')}</td>
-        <td>${fmtV(ev.custo)}</td><td>${fmtV(cv)}</td>
-        <td>${ev2>0?fmtV(ev2):'—'}</td><td>${st}</td></tr>`;
+        <td>${R(ev.custo)}</td><td>${R(cv)}</td><td>${emp>0?R(emp):'—'}</td><td>${st}</td></tr>`;
     }).join('');
-  } else esec.style.display='none';
+  } else se.style.display='none';
 
   // Detalhamento mensal
-  const hE = fluxo.some(r=>r.emp>0), hR = fluxo.some(r=>r.rep>0);
-  const hCols = ['Mês','Entradas','Fee','Custo Evento',...(hE?['Empréstimo']:[]),...(hR?['Repagamento']:[]),'Saldo'];
-  document.getElementById('mhead').innerHTML = hCols.map(c=>`<th>${c}</th>`).join('');
-  document.getElementById('mbody').innerHTML = fluxo.map(r=>{
-    const cor = r.caixa>=0?'#0D9488':'#BE123C';
-    let cells = `<td>${fmtMes(r.mes)}</td><td>${fmtV(r.ent)}</td><td>${fmtV(r.fee)}</td><td>${fmtV(r.ev)}</td>`;
-    if (hE) cells+=`<td>${fmtV(r.emp)}</td>`;
-    if (hR) cells+=`<td>${fmtV(r.rep)}</td>`;
-    cells+=`<td style="font-weight:700;color:${cor}">${fmtV(r.caixa)}</td>`;
-    return `<tr>${cells}</tr>`;
+  const hE=fluxo.some(r=>r.emp>0), hR=fluxo.some(r=>r.rp>0);
+  const hC=['Mês','Entradas','Fee','Custo Evento',...(hE?['Empréstimo']:[]),...(hR?['Repagamento']:[]),'Saldo'];
+  document.getElementById('mh').innerHTML=hC.map(c=>`<th>${c}</th>`).join('');
+  document.getElementById('mb').innerHTML=fluxo.map(r=>{
+    const cor=r.caixa>=0?'#0D9488':'#BE123C';
+    let c=`<td>${fmt(r.mes)}</td><td>${R(r.e)}</td><td>${R(r.fm)}</td><td>${R(r.ev)}</td>`;
+    if(hE) c+=`<td>${R(r.emp)}</td>`;
+    if(hR) c+=`<td>${R(r.rp)}</td>`;
+    c+=`<td style="font-weight:700;color:${cor}">${R(r.caixa)}</td>`;
+    return `<tr>${c}</tr>`;
   }).join('');
 }
 </script>
