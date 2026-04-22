@@ -205,7 +205,10 @@
 <div id="results">
   <div id="kpi-grid" class="kpi-grid"></div>
 
-  <h2>Linha do Tempo de Caixa</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <h2 style="margin:0">Linha do Tempo de Caixa</h2>
+    <button onclick="downloadPNG()" style="font-size:12px;font-weight:600;color:var(--primaria);background:none;border:1px solid var(--primaria);border-radius:6px;padding:5px 12px;cursor:pointer">⬇ Baixar PNG</button>
+  </div>
   <div class="chart-box">
     <div id="chart-wrap"><canvas id="myChart"></canvas></div>
   </div>
@@ -559,6 +562,14 @@ function calcular(){
     c+=`<td style="font-weight:700;color:${cor}">${R(r.caixa)}</td>`;
     return `<tr>${c}</tr>`;
   }).join('');
+}
+
+function downloadPNG() {
+  if (!chart) return;
+  const a = document.createElement('a');
+  a.href = chart.toBase64Image('image/png', 1);
+  a.download = 'fluxo-de-caixa.png';
+  a.click();
 }
 </script>
 </body>
