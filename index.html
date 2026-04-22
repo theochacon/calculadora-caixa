@@ -453,7 +453,7 @@ function calcular(){
       const evN=evL.find(x=>x.k===k)?.nome||'Evento';
       if(caixa>=ev) caixa-=ev;
       else if(useEmp){
-        const sf=ev-caixa; emp=sf; caixa=0;
+        const sf=ev-Math.max(0,caixa); emp=sf; caixa=Math.min(0,caixa);
         const r=taxaEmp/100;
         const pmt=r>0?sf*r*Math.pow(1+r,nPEmp)/(Math.pow(1+r,nPEmp)-1):sf/nPEmp;
         for(let i=1;i<=nPEmp;i++){const rk=key(add(mes,i)); rep[rk]=(rep[rk]||0)+pmt;}
