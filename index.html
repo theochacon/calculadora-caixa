@@ -88,6 +88,16 @@
 
 <h2>Adesão por Lotes</h2>
 <p class="cap" style="margin-bottom:10px">Quantidade de clientes, valor unitário, mês da 1ª parcela e número de parcelas.</p>
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap">
+  <label class="tog-row">
+    <span class="tog"><input type="checkbox" id="usar-entrada"><span class="tog-sl"></span></span>
+    <span style="font-size:13px;font-weight:500">Considerar entrada no ato da venda</span>
+  </label>
+  <div id="entrada-pct-wrap" style="display:none;display:flex;align-items:center;gap:8px">
+    <span class="lbl" style="white-space:nowrap">% de entrada</span>
+    <input type="number" id="entrada-pct" min="1" max="99" value="30" style="width:80px">
+  </div>
+</div>
 <div class="tbl-wrap">
   <table class="et" id="tbl-ad">
     <thead><tr><th>Qtd</th><th>Valor Unit. (R$)</th><th>1ª Parcela</th><th>Parcelas</th><th></th></tr></thead>
@@ -316,6 +326,11 @@ function feeUI(){
 document.querySelectorAll('input[name="ftipo"]').forEach(r=>r.addEventListener('change',feeUI));
 ['fee-total','fn-p','fi-p','fe-v','fe-d','fe-n','fe-i','fr-pe','fr-cp','fr-n','fr-i','t-emp','n-emp']
   .forEach(id=>document.getElementById(id).addEventListener('input',deb(feeUI,350)));
+document.getElementById('usar-entrada').addEventListener('change',()=>{
+  document.getElementById('entrada-pct-wrap').style.display = document.getElementById('usar-entrada').checked ? 'flex' : 'none';
+  calcular();
+});
+document.getElementById('entrada-pct').addEventListener('input', calcDeb);
 document.getElementById('usar-emp').addEventListener('change',()=>{
   document.getElementById('emp-p').style.display = document.getElementById('usar-emp').checked ? '' : 'none';
   calcular();
@@ -368,13 +383,20 @@ function calcular(){
 
   // Entradas mensais
   const ent={};
+  const usarEnt = document.getElementById('usar-entrada').checked;
+  const entPct  = (parseFloat(document.getElementById('entrada-pct').value)||30) / 100;
   Object.values(cats).flat().forEach(r=>{
     const [y,m]=r.d.split('-').map(Number);
     const ini=new Date(y,m-1,1);
-    const pv=(r.q*r.v)/Math.max(r.p,1);
-    for(let i=0;i<r.p;i++){
-      const k=key(add(ini,i));
-      ent[k]=(ent[k]||0)+pv;
+    const total=r.q*r.v;
+    if(usarEnt){
+      const kEnt=key(ini);
+      ent[kEnt]=(ent[kEnt]||0)+total*entPct;
+      const pv=total*(1-entPct)/Math.max(r.p,1);
+      for(let i=0;i<r.p;i++){ const k=key(add(ini,i)); ent[k]=(ent[k]||0)+pv; }
+    } else {
+      const pv=total/Math.max(r.p,1);
+      for(let i=0;i<r.p;i++){ const k=key(add(ini,i)); ent[k]=(ent[k]||0)+pv; }
     }
   });
 
