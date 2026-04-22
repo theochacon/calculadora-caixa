@@ -424,7 +424,8 @@ function calcular(){
   const allK=new Set([...Object.keys(ent),...Object.keys(cus),...Object.keys(feM)]);
   if(tipo==='prop'&&fIni) allK.add(key(fIni));
   const sk=Array.from(allK).sort();
-  const minM=new Date(sk[0]+'-01'), maxB=new Date(sk[sk.length-1]+'-01');
+  const _p = s => { const [y,m]=s.split('-').map(Number); return new Date(y,m-1,1); };
+  const minM=_p(sk[0]), maxB=_p(sk[sk.length-1]);
   let ext=(useEmp&&evL.length)?nPEmp:0;
   if(tipo==='prop'&&tot>0) ext=Math.max(ext,fpFN+24);
   const maxM=add(maxB,ext);
