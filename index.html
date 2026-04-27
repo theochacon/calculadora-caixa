@@ -79,9 +79,27 @@
     .rt tr:last-child td { border-bottom:none; }
 
     #empty-msg { text-align:center; padding:48px 24px; color:var(--muted); font-size:14px; background:var(--card); border-radius:12px; border:1px solid var(--border); }
+
+    @media screen { #print-view { display:none; } }
+    @media print {
+      body { padding:0; max-width:none; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      #app { display:none !important; }
+      #print-view { display:block; font-family:-apple-system,'Segoe UI',sans-serif; color:#090430; }
+      .ps { margin-bottom:14px; }
+      .ps > h2 { font-size:13px; font-weight:700; margin:14px 0 7px; color:#0000F4; border-bottom:2px solid #0000F4; padding-bottom:3px; page-break-after:avoid; }
+      .pt { width:100%; border-collapse:collapse; font-size:11px; margin-bottom:8px; }
+      .pt th { background:#F4F4FA; padding:5px 8px; text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.08em; border-bottom:1px solid #ccc; color:#555; }
+      .pt td { padding:4px 8px; border-bottom:1px solid #eee; }
+      .kpi-grid { display:grid; gap:8px; margin-bottom:12px; }
+      .kpi { background:#F4F4FA !important; border-radius:6px; padding:10px 14px; border:1px solid #ddd !important; break-inside:avoid; }
+      .kpi-lbl { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
+      .kpi-val { font-size:16px; font-weight:700; }
+      @page { margin:12mm 15mm; }
+    }
   </style>
 </head>
 <body>
+<div id="app">
 
 <h1>Calculadora de Caixa</h1>
 <p class="cap">Preencha os campos — o gráfico atualiza automaticamente. Seções em branco são ignoradas.</p>
@@ -217,7 +235,10 @@
 
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
     <h2 style="margin:0">Linha do Tempo de Caixa</h2>
-    <button onclick="downloadPNG()" style="font-size:12px;font-weight:600;color:var(--primaria);background:none;border:1px solid var(--primaria);border-radius:6px;padding:5px 12px;cursor:pointer">⬇ Baixar PNG</button>
+    <div style="display:flex;gap:8px">
+      <button onclick="downloadPNG()" style="font-size:12px;font-weight:600;color:var(--primaria);background:none;border:1px solid var(--primaria);border-radius:6px;padding:5px 12px;cursor:pointer">⬇ Baixar PNG</button>
+      <button onclick="exportarPDF()" style="font-size:12px;font-weight:600;color:var(--card);background:var(--primaria);border:1px solid var(--primaria);border-radius:6px;padding:5px 12px;cursor:pointer">⬇ Exportar PDF</button>
+    </div>
   </div>
   <div class="chart-box">
     <div id="chart-wrap"><canvas id="myChart"></canvas></div>
@@ -242,6 +263,9 @@
     <table class="rt" id="t-mon"><thead><tr id="mh"></tr></thead><tbody id="mb"></tbody></table>
   </div>
 </div>
+
+</div><!--#app-->
+<div id="print-view"></div>
 
 <script>
 // ── Helpers ───────────────────────────────────────────────────
@@ -584,6 +608,111 @@ function calcular(){
     c+=`<td style="font-weight:700;color:${cor}">${R(r.caixa)}</td>`;
     return `<tr>${c}</tr>`;
   }).join('');
+}
+
+function exportarPDF() {
+  if (!chart) return;
+  const pv   = document.getElementById('print-view');
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  let   inp  = '';
+
+  // Adesão por Lotes
+  const adR = readLotes('tbl-ad');
+  if (adR.length) {
+    const usarEnt = document.getElementById('usar-entrada').checked;
+    const entPct  = document.getElementById('entrada-pct').value;
+    inp += `<div class="ps"><h2>Adesão por Lotes</h2>`;
+    if (usarEnt) inp += `<p style="font-size:11px;margin-bottom:6px">Entrada no ato: <strong>${entPct}%</strong></p>`;
+    inp += `<table class="pt"><thead><tr><th>Qtd</th><th>Valor Unit.</th><th>1ª Parcela</th><th>Parcelas</th><th>Total</th></tr></thead><tbody>`;
+    adR.forEach(r => inp += `<tr><td>${r.q}</td><td>${R(r.v)}</td><td>${r.d}</td><td>${r.p}x</td><td>${R(r.q*r.v)}</td></tr>`);
+    inp += `</tbody></table></div>`;
+  }
+
+  // Convites e Mesas
+  const catExtra = [
+    {id:'tbl-cb', label:'Convites — Baile'},
+    {id:'tbl-cj', label:'Convites — Jantar'},
+    {id:'tbl-mb', label:'Mesas — Baile'},
+    {id:'tbl-mj', label:'Mesas — Jantar'},
+  ];
+  const anyExtra = catExtra.some(({id}) => readLotes(id).length > 0);
+  if (anyExtra) {
+    inp += `<div class="ps"><h2>Convites e Mesas Extras</h2>`;
+    catExtra.forEach(({id, label}) => {
+      const rows = readLotes(id);
+      if (!rows.length) return;
+      inp += `<p style="font-weight:700;font-size:11px;margin:8px 0 4px">${label}</p>`;
+      inp += `<table class="pt"><thead><tr><th>Qtd</th><th>Valor Unit.</th><th>1ª Parcela</th><th>Parcelas</th><th>Total</th></tr></thead><tbody>`;
+      rows.forEach(r => inp += `<tr><td>${r.q}</td><td>${R(r.v)}</td><td>${r.d}</td><td>${r.p}x</td><td>${R(r.q*r.v)}</td></tr>`);
+      inp += `</tbody></table>`;
+    });
+    inp += `</div>`;
+  }
+
+  // Fee da Agência
+  const feeT = ftotal();
+  if (feeT > 0) {
+    const tipo = ftipo();
+    let fDesc = '';
+    if (tipo === 'parcelas') {
+      const n = parseInt(document.getElementById('fn-p').value)||1;
+      fDesc = `${n}x a partir de ${document.getElementById('fi-p').value} · ${R(feeT/n)}/mês`;
+    } else if (tipo === 'entrada') {
+      const ev = parseFloat(document.getElementById('fe-v').value)||0;
+      const n  = parseInt(document.getElementById('fe-n').value)||1;
+      fDesc = `Entrada ${R(ev)} + ${n}x de ${R((feeT-ev)/n)}`;
+    } else {
+      const pe = parseFloat(document.getElementById('fr-pe').value)||30;
+      const n  = parseInt(document.getElementById('fr-n').value)||12;
+      fDesc = `Proporcional — entrada ${pe}% + ${n}x de ${R(feeT*(1-pe/100)/n)}`;
+    }
+    inp += `<div class="ps"><h2>Fee da Agência</h2>`;
+    inp += `<table class="pt"><thead><tr><th>Total</th><th>Forma de pagamento</th></tr></thead>`;
+    inp += `<tbody><tr><td><strong>${R(feeT)}</strong></td><td>${fDesc}</td></tr></tbody></table></div>`;
+  }
+
+  // Eventos
+  const evs = readEvs();
+  if (evs.length) {
+    inp += `<div class="ps"><h2>Eventos do Projeto</h2>`;
+    inp += `<table class="pt"><thead><tr><th>Evento</th><th>Data</th><th>Custo</th></tr></thead><tbody>`;
+    evs.forEach(ev => inp += `<tr><td>${ev.n}</td><td>${new Date(ev.d+'T12:00').toLocaleDateString('pt-BR')}</td><td>${R(ev.c)}</td></tr>`);
+    inp += `</tbody></table>`;
+    if (document.getElementById('usar-emp').checked) {
+      const taxa = document.getElementById('t-emp').value;
+      const np   = document.getElementById('n-emp').value;
+      inp += `<p style="font-size:11px;margin-top:4px">Financiamento de eventos: <strong>${taxa}% a.m.</strong> em <strong>${np}x</strong></p>`;
+    }
+    inp += `</div>`;
+  }
+
+  // Tabela mensal (reconstruída com classe .pt)
+  const mhInner = document.getElementById('mh').innerHTML;
+  const mbInner = document.getElementById('mb').innerHTML;
+  const monthTbl = `<table class="pt"><thead><tr>${mhInner}</tr></thead><tbody>${mbInner}</tbody></table>`;
+
+  pv.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;border-bottom:2px solid #0000F4;padding-bottom:10px">
+      <h1 style="font-size:22px;font-weight:800;color:#090430;margin:0">Calculadora de Caixa</h1>
+      <span style="font-size:11px;color:#666">Gerado em ${hoje}</span>
+    </div>
+    <p style="font-size:14px;font-weight:700;margin-bottom:10px">Parâmetros da Simulação</p>
+    ${inp}
+    <div class="ps">
+      <h2>Indicadores</h2>
+      ${document.getElementById('kpi-grid').outerHTML}
+    </div>
+    <div class="ps">
+      <h2>Linha do Tempo de Caixa</h2>
+      <img src="${chart.toBase64Image('image/png',1)}" style="width:100%;border-radius:6px;border:1px solid #eee;margin-top:4px">
+    </div>
+    <div class="ps">
+      <h2>Detalhamento Mensal</h2>
+      ${monthTbl}
+    </div>
+  `;
+
+  window.print();
 }
 
 function downloadPNG() {
