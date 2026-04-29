@@ -390,21 +390,28 @@ document.getElementById('usar-xlsx').addEventListener('change', function(){
 function parsarXlsx(buffer){
   const wb = XLSX.read(buffer, {type:'binary', cellDates:true});
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json(ws, {raw:false, dateNF:'yyyy-mm-dd'});
+  // header:1 retorna arrays por posição — evita problema de encoding nos nomes das colunas
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true});
   const rows = [];
-  data.forEach(row=>{
-    const v = parseFloat(String(row['Valor do Plano']||'').replace(',','.'));
-    const rawD = row['1º Pagamento'] || row['1o Pagamento'] || row['1ª Parcela'] || '';
-    const p = parseInt(row['Nº Parc. Adesão'] || row['No Parc. Adesao'] || row['Parcelas'] || '0');
-    if(!v || !rawD || !p) return;
+  for(let i = 1; i < data.length; i++){
+    const row = data[i];
+    if(!row || row.length < 3) continue;
+    const v = parseFloat(row[0]);
+    const rawD = row[1];
+    const p = parseInt(row[2]);
+    if(!v || !rawD || !p) continue;
     let mes;
-    if(rawD instanceof Date){ mes=rawD.getFullYear()+'-'+String(rawD.getMonth()+1).padStart(2,'0'); }
-    else {
-      const dt=new Date(rawD+'T12:00:00');
-      if(!isNaN(dt)) mes=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    if(rawD instanceof Date){
+      mes = rawD.getFullYear()+'-'+String(rawD.getMonth()+1).padStart(2,'0');
+    } else if(typeof rawD === 'number'){
+      const dt = new Date(Math.round((rawD - 25569) * 86400 * 1000));
+      mes = dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0');
+    } else if(typeof rawD === 'string'){
+      const dt = new Date(rawD+'T12:00:00');
+      if(!isNaN(dt)) mes = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
     }
-    if(mes) rows.push({v, d:mes, p});
-  });
+    if(mes && v > 0 && p > 0) rows.push({v, d:mes, p});
+  }
   return rows;
 }
 
