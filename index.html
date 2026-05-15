@@ -655,9 +655,7 @@ function calcular(){
   document.getElementById('kpi-grid').innerHTML=kh;
 
   // Gráfico (Chart.js)
-  let fimG;
-  if(evL.length){ const ul=evL.reduce((a,e)=>e.mes>a?e.mes:a,evL[0].mes); fimG=add(ul,useEmp&&loans.length?nPEmp+1:2); }
-  else fimG=fluxo.length?fluxo[fluxo.length-1].mes:new Date();
+  const fimG = fluxo.length ? fluxo[fluxo.length-1].mes : new Date();
   const dfG=fluxo.filter(r=>r.mes<=fimG);
   const lbls=dfG.map(r=>fmt(r.mes));
 
