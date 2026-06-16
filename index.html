@@ -426,22 +426,36 @@ function aplicarTurmaBT(){
   if(!sel || !btRawData) return;
   const turma = sel.value;
   if(!turma) return;
-  const rows = [];
+
+  // Agrupa parcelas NÃO pagas por contrato
+  const contratos = new Map();
   for(let i = 1; i < btRawData.length; i++){
     const row = btRawData[i];
     if(!row || String(row[3]||'').trim() !== turma) continue;
-    const parc = String(row[5]||'').trim();
-    if(!parc.startsWith('1/')) continue;
-    const v = parseFloat(row[6]);
-    const p = parseInt(parc.split('/')[1]);
-    const d = parsarDataBR(String(row[8]||'').trim());
-    if(v > 0 && p > 0 && d) rows.push({v, d, p});
+    if(String(row[7]||'').trim().toLowerCase() === 'pago') continue;
+    const id = row[0];
+    if(!contratos.has(id)) contratos.set(id, []);
+    contratos.get(id).push(row);
   }
+
+  const rows = [];
+  contratos.forEach(parcelas => {
+    // Ordena pela numeração da parcela para pegar a mais próxima primeiro
+    parcelas.sort((a,b) =>
+      parseInt(String(a[5]||'0').split('/')[0]) - parseInt(String(b[5]||'0').split('/')[0])
+    );
+    const vPerParc = parseFloat(parcelas[0][6]);
+    const p = parcelas.length;
+    const d = parsarDataBR(String(parcelas[0][8]||'').trim());
+    // v = total restante: calcular() divide v/p para obter a parcela mensal
+    if(vPerParc > 0 && p > 0 && d) rows.push({v: vPerParc * p, d, p});
+  });
+
   xlsxRows = rows;
   const tot = xlsxRows.reduce((a,r)=>a+r.v,0);
   const mediaParc = xlsxRows.length ? Math.round(xlsxRows.reduce((a,r)=>a+r.p,0)/xlsxRows.length) : 0;
   document.getElementById('bt-status').innerHTML =
-    `<div class="xlsx-badge">✓ ${xlsxRows.length} adesões importadas · Total: ${R(tot)} · Parcelas médias: ${mediaParc}x</div>`;
+    `<div class="xlsx-badge">✓ ${xlsxRows.length} contratos · A receber: ${R(tot)} · Parcelas médias restantes: ${mediaParc}x</div>`;
   calcular();
 }
 
