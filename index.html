@@ -451,12 +451,18 @@ function mostrarSeletorTurma(data){
   document.getElementById('xlsx-status').innerHTML = `
     <div style="margin-top:10px">
       <p style="font-size:12px;color:var(--teal);font-weight:600;margin-bottom:8px">Exportação BT detectada — ${turmas.length} turma${turmas.length!==1?'s':''} encontrada${turmas.length!==1?'s':''}</p>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <select id="bt-turma-sel" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--navy);background:var(--card)">
           <option value="">Selecione a turma...</option>
           ${opts}
         </select>
         <button onclick="aplicarTurmaBT()" style="padding:7px 16px;background:var(--primaria);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Importar</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap">Saldo financeiro atual (R$)</span>
+        <input type="number" id="bt-saldo" min="0" step="100" placeholder="0,00"
+          style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--navy);background:var(--card)"
+          oninput="calcular()">
       </div>
       <div id="bt-status" style="margin-top:8px"></div>
     </div>`;
@@ -681,7 +687,8 @@ function calcular(){
 
   // Loop iterativo
   const rep={}, loans=[];
-  let caixa=0, fluxo=[];
+  const saldoInicial = parseFloat(document.getElementById('bt-saldo')?.value)||0;
+  let caixa=saldoInicial, fluxo=[];
   meses.forEach(mes=>{
     const k=key(mes), e=ent[k]||0;
     let fm=0;
@@ -714,10 +721,12 @@ function calcular(){
   const totEmp=loans.reduce((a,l)=>a+l.valor,0);
   const totDev=loans.reduce((a,l)=>a+l.pmt*l.parcelas,0);
   const saldo=fluxo.length?fluxo[fluxo.length-1].caixa:0;
-  const nc=loans.length?6:4;
+  const nc=(loans.length?6:4)+(saldoInicial>0?1:0);
   const corS=saldo>=0?'#0D9488':'#BE123C';
   document.getElementById('kpi-grid').style.gridTemplateColumns=`repeat(${nc},1fr)`;
-  let kh=`
+  let kh='';
+  if(saldoInicial>0) kh+=`<div class="kpi"><div class="kpi-lbl">Saldo Inicial</div><div class="kpi-val">${R(saldoInicial)}</div></div>`;
+  kh+=`
     <div class="kpi"><div class="kpi-lbl">Receita Total</div><div class="kpi-val">${R(totR)}</div></div>
     <div class="kpi"><div class="kpi-lbl">Fee da Agência</div><div class="kpi-val">${R(totF)}</div></div>
     <div class="kpi"><div class="kpi-lbl">Custos Eventos</div><div class="kpi-val">${R(totEv)}</div></div>`;
