@@ -138,7 +138,7 @@
     <div class="xlsx-drop" id="xlsx-drop" onclick="document.getElementById('xlsx-file').click()">
       <input type="file" id="xlsx-file" accept=".xlsx,.xls" style="display:none">
       <p style="font-size:13px;color:var(--muted);margin-bottom:3px">Clique para selecionar ou arraste o arquivo <strong>.xlsx</strong></p>
-      <p style="font-size:11px;color:var(--muted)">Colunas esperadas: <strong>Valor do Plano</strong> · <strong>1º Pagamento</strong> · <strong>Nº Parc. Adesão</strong></p>
+      <p style="font-size:11px;color:var(--muted)">Formato padrão: <strong>Valor do Plano · 1º Pagamento · Nº Parc. Adesão</strong> &nbsp;·&nbsp; Ou exportação <strong>BT</strong> (detectada automaticamente)</p>
     </div>
     <div id="xlsx-status"></div>
   </div>
@@ -393,16 +393,77 @@ document.getElementById('usar-emp').addEventListener('change',()=>{
 });
 
 // ── Xlsx import ───────────────────────────────────────────────
+let btRawData = null;
+
 document.getElementById('usar-xlsx').addEventListener('change', function(){
   document.getElementById('xlsx-area').style.display = this.checked ? '' : 'none';
   calcular();
 });
 
-function parsarXlsx(buffer){
-  const wb = XLSX.read(buffer, {type:'binary', cellDates:true});
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  // header:1 retorna arrays por posição — evita problema de encoding nos nomes das colunas
-  const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true});
+function detectarFormatoBT(data){
+  if(!data || !data[0]) return false;
+  return String(data[0][0]||'').trim().toLowerCase() === 'contrato id';
+}
+
+function parsarDataBR(s){
+  if(!s || typeof s !== 'string') return null;
+  const p = s.trim().split('/');
+  if(p.length !== 3) return null;
+  return p[2]+'-'+p[1].padStart(2,'0');
+}
+
+function extrairTurmasBT(data){
+  const turmas = new Set();
+  for(let i = 1; i < data.length; i++){
+    const t = data[i][3];
+    if(t) turmas.add(String(t).trim());
+  }
+  return Array.from(turmas).sort();
+}
+
+function aplicarTurmaBT(){
+  const sel = document.getElementById('bt-turma-sel');
+  if(!sel || !btRawData) return;
+  const turma = sel.value;
+  if(!turma) return;
+  const rows = [];
+  for(let i = 1; i < btRawData.length; i++){
+    const row = btRawData[i];
+    if(!row || String(row[3]||'').trim() !== turma) continue;
+    const parc = String(row[5]||'').trim();
+    if(!parc.startsWith('1/')) continue;
+    const v = parseFloat(row[6]);
+    const p = parseInt(parc.split('/')[1]);
+    const d = parsarDataBR(String(row[8]||'').trim());
+    if(v > 0 && p > 0 && d) rows.push({v, d, p});
+  }
+  xlsxRows = rows;
+  const tot = xlsxRows.reduce((a,r)=>a+r.v,0);
+  const mediaParc = xlsxRows.length ? Math.round(xlsxRows.reduce((a,r)=>a+r.p,0)/xlsxRows.length) : 0;
+  document.getElementById('bt-status').innerHTML =
+    `<div class="xlsx-badge">✓ ${xlsxRows.length} adesões importadas · Total: ${R(tot)} · Parcelas médias: ${mediaParc}x</div>`;
+  calcular();
+}
+
+function mostrarSeletorTurma(data){
+  const turmas = extrairTurmasBT(data);
+  const opts = turmas.map(t=>`<option value="${t.replace(/"/g,'&quot;')}">${t}</option>`).join('');
+  document.getElementById('xlsx-status').innerHTML = `
+    <div style="margin-top:10px">
+      <p style="font-size:12px;color:var(--teal);font-weight:600;margin-bottom:8px">Exportação BT detectada — ${turmas.length} turma${turmas.length!==1?'s':''} encontrada${turmas.length!==1?'s':''}</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="bt-turma-sel" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--navy);background:var(--card)">
+          <option value="">Selecione a turma...</option>
+          ${opts}
+        </select>
+        <button onclick="aplicarTurmaBT()" style="padding:7px 16px;background:var(--primaria);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Importar</button>
+      </div>
+      <div id="bt-status" style="margin-top:8px"></div>
+    </div>`;
+}
+
+// header:1 retorna arrays por posição — evita problema de encoding nos nomes das colunas
+function parsarXlsxLegado(data){
   const rows = [];
   for(let i = 1; i < data.length; i++){
     const row = data[i];
@@ -433,14 +494,28 @@ function mostrarStatusXlsx(){
     `<div class="xlsx-badge">✓ ${xlsxRows.length} adesões importadas · Total: ${R(tot)} · Parcelas médias: ${mediaParc}x</div>`;
 }
 
+function processarArquivo(buffer){
+  const wb = XLSX.read(buffer, {type:'binary', cellDates:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:true});
+  if(detectarFormatoBT(data)){
+    btRawData = data;
+    xlsxRows = [];
+    mostrarSeletorTurma(data);
+  } else {
+    btRawData = null;
+    xlsxRows = parsarXlsxLegado(data);
+    mostrarStatusXlsx();
+    calcular();
+  }
+}
+
 document.getElementById('xlsx-file').addEventListener('change', function(e){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = ev=>{
     try {
-      xlsxRows = parsarXlsx(ev.target.result);
-      mostrarStatusXlsx();
-      calcular();
+      processarArquivo(ev.target.result);
     } catch(err){
       document.getElementById('xlsx-status').innerHTML = '<span style="color:var(--critico);font-size:12px">Erro ao ler o arquivo. Verifique o formato.</span>';
     }
@@ -458,9 +533,7 @@ drop.addEventListener('drop', e=>{
   const reader = new FileReader();
   reader.onload = ev=>{
     try {
-      xlsxRows = parsarXlsx(ev.target.result);
-      mostrarStatusXlsx();
-      calcular();
+      processarArquivo(ev.target.result);
     } catch(err){
       document.getElementById('xlsx-status').innerHTML = '<span style="color:var(--critico);font-size:12px">Erro ao ler o arquivo.</span>';
     }
